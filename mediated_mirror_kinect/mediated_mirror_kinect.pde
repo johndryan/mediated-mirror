@@ -243,11 +243,24 @@ void onEndPose(String pose,int userId)
 }
 
 void keyPressed() {
-  if (key == ' ') {
-    if (debug) {
-      debug = false;
-    } else {
-      debug = true;
-    }
+  switch(key) {
+    case ' ': 
+      if (debug) {
+        debug = false;
+      } else {
+        debug = true;
+      }
+      break;
+    case 'r':
+      println("RESET ALL MIRRORS");
+      for (int i = firstServo; i <= lastServo; i++) {
+        arduino.analogWrite(i, servos[i][1]);
+        delay(75);
+      }
+      for (int i = 0; i < mirrorState.length; i++) {
+        mirrorState[i] = false;
+        lastMirrorState[i] = false;
+      }
+      break;
   }
 }
