@@ -8,8 +8,10 @@
 
 import SimpleOpenNI.*;
 SimpleOpenNI  context;
+boolean autoCalib = true;
 
 int currentFrame = 0;
+int debugFreq = 100;
 float maxwidth = 600;
 
 import processing.serial.*;
@@ -58,6 +60,11 @@ void setup()
   context.enableScene();
 
   background(200, 0, 0);
+  
+  stroke(255,0,0);
+  strokeWeight(3);
+  smooth();
+  
   size(context.sceneWidth(), context.sceneHeight());
 
   //println(Arduino.list()[8]);
@@ -69,47 +76,66 @@ void setup()
   }
 }
 
-void draw()
-{
-  // update the cam
-  context.update();
-
-  // draw irImageMap
-
-  image(context.sceneImage(), 0, 0);
-
-  int userCount = context.getNumberOfUsers();
-  int[] userMap = null;
-  if (userCount > 0)
-  {
-    userMap = context.getUsersPixels(SimpleOpenNI.USERS_ALL);
-  }
-
-  // Reset mirror states
+void draw() {
+  
+  
+  // RESET MIRROR STATES
   arrayCopy(mirrorState, lastMirrorState);
   for (int i = 0; i < numMirrors; i++) {
     mirrorState[i] = false;
   }
 
-  PVector pos = new PVector();
+
+  // UPDATE KINECT CAM
+  context.update();
+
+
+  // USERS
+  int userCount = context.getNumberOfUsers();
+  int[] userMap = null;
+  if (userCount > 0) {
+    userMap = context.getUsersPixels(SimpleOpenNI.USERS_ALL);
+  }
+
+
+  // GET POSITION
+  PVector projPosition = new PVector();
+  PVector worldPosition = new PVector();
   for (int userId = 1; userId <= userCount; userId++) {
-    context.getCoM(userId, pos);    //Get center of mass
+    
 
-      fill(255, 0, 0);
-    ellipse(pos.x, pos.y, 3, 3);
-
-    if (currentFrame % 100 == 0) {
-      println("USER #" + userId + ": " + pos.x + ", " + pos.y);
+    if(context.isTrackingSkeleton(userId)) {
+      
+      // IF HAS SKELETON
+      context.getJointPositionSkeleton(userId, SimpleOpenNI.SKEL_HEAD, projPosition);
+      
+    } else {
+      
+      // USE Center of Mass, NOT SKELETON
+      context.getCoM(userId, projPosition);
+  
     }
-    //println(pos.x);
-
-    if (pos.x != 0) {
-      int currentMirror = int(map(pos.x, -maxwidth, maxwidth, 0, numMirrors-1));
-      //println("CURRENT MIRROR: " + pos.x + " = " + currentMirror);
+    
+    context.convertProjectiveToRealWorld(projPosition, worldPosition);
+    
+    // SELECT MIRROR FOR CURRENT POSITION
+    if (projPosition.x != 0) {
+      int currentMirror = int(map(projPosition.x, -maxwidth, maxwidth, 0, numMirrors-1));
+      //println("CURRENT MIRROR: " + projPosition.x + " = " + currentMirror);
       if (currentMirror >= 0 && currentMirror < numMirrors) mirrorState[currentMirror] = true;
     }
+    
+    // DEBUG POSITION
+    if (currentFrame % 100 == 0) {
+      println("USER #" + userId + ": PROJ  : " + projPosition.x + ", " + projPosition.y);
+      println("USER #" + userId + ": WORLD : " + worldPosition.x + ", " + worldPosition.y);
+    }
   }  
+  
+  // DRAW IR DEPTH MAP TO SCREEN
+  image(context.sceneImage(), 0, 0);
 
+  // DRAW MIRRORS
   for (int i = 0; i < numMirrors; i++) {
     if (mirrorState[i]) {
       fill(255, 0, 0, 175);      
@@ -123,30 +149,86 @@ void draw()
     rect(i*(width/numMirrors)+5, 5, (width-((numMirrors+1)*5))/numMirrors, (width-((numMirrors+1)*5))/numMirrors);
   }
 
-  //int[] map = context.sceneMap();
-  if (currentFrame % 100 == 0) {
-    println("userCount: " + userCount);
-    println("userMap: " + userMap);
+  //DEBUGGING
+  if (currentFrame % debugFreq == 0) {
+    //println("userCount: " + userCount);
+    //println("userMap: " + userMap);
   }
   currentFrame++;
 }
 
 void doServo(int mirrorNum, Boolean angled) {
   // Has it changed?
-  println("CHECKING");
+  // println("CHECKING");
   if (mirrorState[mirrorNum] != lastMirrorState[mirrorNum]) {
     int serverNum = lastServo - mirrorNum;
     // Does it have a servo?
     if (serverNum >= firstServo && serverNum <= lastServo) {
       if (angled) {
-        println("Server " + serverNum + " ANGLED");
+        // println("Server " + serverNum + " ANGLED");
         arduino.analogWrite(serverNum, servos[serverNum][0]);
       } 
       else {
-        println("Server " + serverNum + " STRAIGHT");        
+        // println("Server " + serverNum + " STRAIGHT");        
         arduino.analogWrite(serverNum, servos[serverNum][1]);
       }
     }
   }
+}
+
+// -----------------------------------------------------------------
+// SimpleOpenNI events
+
+void onNewUser(int userId)
+{
+  println("onNewUser - userId: " + userId);
+  println("  start pose detection");
+  
+  if(autoCalib)
+    context.requestCalibrationSkeleton(userId,true);
+  else    
+    context.startPoseDetection("Psi",userId);
+}
+
+void onLostUser(int userId)
+{
+  println("onLostUser - userId: " + userId);
+}
+
+void onStartCalibration(int userId)
+{
+  println("onStartCalibration - userId: " + userId);
+}
+
+void onEndCalibration(int userId, boolean successfull)
+{
+  println("onEndCalibration - userId: " + userId + ", successfull: " + successfull);
+  
+  if (successfull) 
+  { 
+    println("  User calibrated !!!");
+    context.startTrackingSkeleton(userId); 
+  } 
+  else 
+  { 
+    println("  Failed to calibrate user !!!");
+    println("  Start pose detection");
+    context.startPoseDetection("Psi",userId);
+  }
+}
+
+void onStartPose(String pose,int userId)
+{
+  println("onStartPose - userId: " + userId + ", pose: " + pose);
+  println(" stop pose detection");
+  
+  context.stopPoseDetection(userId); 
+  context.requestCalibrationSkeleton(userId, true);
+ 
+}
+
+void onEndPose(String pose,int userId)
+{
+  println("onEndPose - userId: " + userId + ", pose: " + pose);
 }
 
