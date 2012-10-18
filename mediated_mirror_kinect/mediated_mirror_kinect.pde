@@ -1,7 +1,8 @@
 /* --------------------------------------------------------------------------
- * SimpleOpenNI – Mediated Mirror
+ * Mediated Mirror - with SimpleOpenNI
+ * https://github.com/johndryan/mediated-mirror
  * --------------------------------------------------------------------------
- * http://code.google.com/p/simple-openni
+ * LIBRARY: http://code.google.com/p/simple-openni
  * ----------------------------------------------------------------------------
  */
 
