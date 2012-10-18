@@ -11,7 +11,7 @@ SimpleOpenNI  context;
 boolean autoCalib = true;
 
 int currentFrame = 0;
-int debugFreq = 100;
+int debugFreq = 200;
 float maxwidth = 575;
 float maxZDist = 2700;
 Boolean debug = false;
@@ -28,7 +28,7 @@ Arduino arduino;                                          // DIGITAL OUT PINS
                                                           // -------------------------
 int[][] servos = {  {  0,  0    },                        // Won't be used = Serial RX
                     {  0,  0    },                        // Won't be used = Serial TX
-                    {  40, 120  },                        // 2
+                    {  40, 110  },                        // 2
                     {  90, 160  },                        // 3
                     {  90, 180  },                        // 4
                     {  30, 150  },                        // 5
@@ -103,34 +103,39 @@ void draw() {
   if (userCount > 0) {
     userMap = context.getUsersPixels(SimpleOpenNI.USERS_ALL);
   }
-
-
+  
   // GET POSITION
   PVector projPosition = new PVector();
   PVector worldPosition = new PVector();
-  for (int userId = 1; userId <= userCount; userId++) {
-    
 
-    if(context.isTrackingSkeleton(userId)) {
-      
-      // IF HAS SKELETON
-      context.getJointPositionSkeleton(userId, SimpleOpenNI.SKEL_HEAD, projPosition);
-      
-    } else {
-      
-      // USE Center of Mass, NOT SKELETON
-      context.getCoM(userId, projPosition);
+  // CHECK FOR USERS
+  IntVector userList = new IntVector();
+  context.getUsers(userList);
+  if (userList.size() > 0) {
   
-    }
+    for (int i = 0; i < userList.size(); i++) {
+      
+      int userId = userList.get(i);
+      if(context.isTrackingSkeleton(userId)) {
+        
+        // IF HAS SKELETON
+        context.getJointPositionSkeleton(userId, SimpleOpenNI.SKEL_HEAD, projPosition);
+        
+      } else {
+        
+        // USE Center of Mass, NOT SKELETON
+        context.getCoM(userId, projPosition);
     
-    context.convertProjectiveToRealWorld(projPosition, worldPosition);
-    
-    // SELECT MIRROR FOR CURRENT POSITION
-    if (projPosition.x != 0 && projPosition.z < maxZDist) {
-      int currentMirror = int(map(projPosition.x, -maxwidth, maxwidth, firstServo-2, lastServo-2));
-      if (currentMirror >= 0 && currentMirror < numMirrors) mirrorState[currentMirror] = true;
-    }
-  }  
+      }
+      
+      // SELECT MIRROR FOR CURRENT POSITION
+      if (projPosition.x != 0 && projPosition.z < maxZDist) {
+        int currentMirror = int(map(projPosition.x, -maxwidth, maxwidth, firstServo-2, lastServo-2));
+        if (currentMirror >= 0 && currentMirror < numMirrors) mirrorState[currentMirror] = true;
+      }
+      
+    }  
+  }
   
   // DRAW IR DEPTH MAP TO SCREEN
   image(context.sceneImage(), 0, 0);
@@ -160,10 +165,8 @@ void draw() {
     fill(0,255,0);
     text( -maxwidth + " : " + maxwidth, 10, height-10);
     textAlign(RIGHT);
-    fill(255);
-    text( int(worldPosition.x) + " , " + int(worldPosition.y) + " , " + int(worldPosition.z), width-10, height-10);
     fill(255,0,0);
-    text( int(projPosition.x) + " , " + int(projPosition.y) + " , " + int(projPosition.z), width-10, height-40);
+    text( int(projPosition.x) + " , " + int(projPosition.y) + " , " + int(projPosition.z), width-10, height-10);
   }
   currentFrame++;
 }
