@@ -135,8 +135,6 @@ void draw() {
   // DRAW IR DEPTH MAP TO SCREEN
   image(context.sceneImage(), 0, 0);
 
-  if (debug) {
-
     // DRAW MIRRORS
     for (int i = 0; i < numMirrors; i++) {
       if (mirrorState[i]) {
@@ -151,6 +149,8 @@ void draw() {
       rect(i*(width/numMirrors)+5, 5, (width-((numMirrors+1)*5))/numMirrors, (width-((numMirrors+1)*5))/numMirrors);
     }
 
+  if (debug) {
+    
   //DEBUGGING
     fill(0);
     rect(0, height-70, width, 70);
