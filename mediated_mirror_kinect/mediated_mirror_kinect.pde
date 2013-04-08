@@ -12,8 +12,8 @@ boolean autoCalib = true;
 
 int currentFrame = 0;
 int debugFreq = 200;
-float maxwidth = 575;
-float maxZDist = 2700;
+float maxwidth = 550; // 575
+float maxZDist = 10000; //2700;
 Boolean debug = false;
 
 PFont font;
@@ -25,21 +25,23 @@ import processing.serial.*;
 import cc.arduino.*;
 
 Arduino arduino;                                          // DIGITAL OUT PINS
-                                                          // -------------------------
+// ----------------- OFF, PARALLEL ---------------------- // -------------------------
 int[][] servos = {  {  0,  0    },                        // Won't be used = Serial RX
                     {  0,  0    },                        // Won't be used = Serial TX
-                    {  40, 110  },                        // 2
-                    {  90, 160  },                        // 3
+                    
+                    {  70, 160  },                        // 2
+                    {  105, 15  },                        // 3
                     {  90, 180  },                        // 4
-                    {  30, 150  },                        // 5
+                    {  90, 180  },                        // 5
                     {  45, 135  },                        // 6
-                    {  80, 180  },                        // 7
-                    {  135, 15  },                        // 8
-                    {  135, 15  },                        // 9
+                    {  155, 65  },                        // 7
+                    
+                    {  105, 15  },                        // 8
+                    {  105, 15  },                        // 9
                     {  90, 180  },                        // 10
-                    {  90, 170  },                        // 11
-                    {  90, 170  },                        // 12
-                    {  130, 40  }                         // 13
+                    {  170, 80  },                        // 11
+                    {  140, 50  },                        // 12
+                    {  95, 5  }                         // 13
                  };
 int firstServo = 2;
 int lastServo = 13;
@@ -75,8 +77,8 @@ void setup()
   
   size(context.sceneWidth(), context.sceneHeight());
 
-  //println(Arduino.list()[8]); // For checking which USB port/device
-  arduino = new Arduino(this, Arduino.list()[8], 57600);
+  println(Arduino.list()); // For checking which USB port/device
+  arduino = new Arduino(this, Arduino.list()[4], 57600);
 
   for (int i = firstServo; i <= lastServo; i++) {
     arduino.analogWrite(i, servos[i][1]);
